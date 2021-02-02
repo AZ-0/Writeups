@@ -469,3 +469,11 @@ All hail pwntools!
 [Here](rev_part_2.py) is the full script :D
 
 Thanks for reading!
+
+## Easter Egg ─ Addendum by Chopswiss
+Remember our plaintext `*DONT TRUST THE E*`?
+
+In flag.txt he value e is `452830202329312f76521c7e3d182629670c247d3f67606a0d7e181064160d0d7260171e000170067a29`
+Decrypted key is `00696374667b746831735f31735f7468335f6b33792e2e2e44305f5930555f483334525f5448334d3f7d` (`ictf{th1s_1s_th3_k3y...D0_Y0U_H34R_TH3M?}`)
+
+So if you then XOR both you get `EASTEREGG!CONGRATSONFINDINGITCREATEATICKET`.
