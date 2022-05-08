@@ -2,7 +2,7 @@
 
 | Category | Author   | Solves | Points |
 | -------- | -------- | ------ | ------ |
-| Crypto   | \\J      |     9  |   479  |
+| Crypto   | \\J      |    10  |   477  |
 
 ## Understanding the challenge
 
