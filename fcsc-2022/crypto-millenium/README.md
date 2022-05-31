@@ -18,7 +18,7 @@ We are given a (HUGE) file containing the following:
 
 - `sign.py`
 - `millenium_remote_server.py`
-- a `data` folder, with `generate.py`, `pubkey.npy`, `sigs.py` (280 Mo!)
+- a `data` folder, with `generate.py`, `pubkey.npy`, `sigs.npy` (280 Mo!)
 - a `secure_code` folder, following the description we won't bother with it for now
 
 A quick look into `generate.py` reveals that it does exactly what it's supposed to do: generating 300k signatures and giving us the public key.
@@ -45,7 +45,7 @@ from math import sqrt
 Perhaps it's some library? Googling `python "ntrugen"` immediately yields a very interesting repository: https://github.com/tprest/falcon.py.
 It has got all the files we need (ntrugen, ntt, fft, common) as well as their dependencies!
 
-We've learned something important: the challenge implements [Falcon](falcon-sign.info/), a signature scheme.
+We've learned something important: the challenge implements [Falcon](https://falcon-sign.info/), a signature scheme.
 
 Pulling the repo and plugging the imports into `sign.py`, we run the `test` function:
 ```py
