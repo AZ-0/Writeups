@@ -4,7 +4,7 @@
 
 | Category | Author | Solves | Points | Expected Difficulty |
 | -------- | ------ | ------ | ------ | ------------------- |
-| Crypto   | A~Z    |      3 |    499 | Hard                |
+| Crypto   | A~Z    |      6 |    497 | Hard                |
 
 ## Understanding the challenge
 
