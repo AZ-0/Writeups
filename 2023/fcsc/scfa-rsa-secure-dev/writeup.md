@@ -22,7 +22,7 @@ Side Channels and Fault Attacks   | Neige  | 54     | 372
 The description is quite self-explanatory: we must implement, using the assembly language of the vm, an RSA signature.
 We don't need to reverse the vm, as we are given general informations about it [here](https://www.france-cybersecurity-challenge.fr/vm).
 
-The relevant code in `challenge.py` checks that our code is correct and achieve reasonable performances compared to the reference solution:
+The relevant code in `challenge.py` checks that our code is correct and achieves reasonable performances compared to the reference solution:
 ```py
 def easy(code):
     correctness(code)
@@ -30,10 +30,10 @@ def easy(code):
     flag_easy = open("flag_easy.txt").read().strip()
     print(f"[+] Congrats! Here is the easy flag: {flag_easy}")
 ```
-where `correctness` tests our code against one static and one randomly generated key, and `performance` benchmarks both our code and the reference.
-We must achieve no more than a `5/3` ratio between their running times.
+where `correctness` tests our code against one static and one randomly generated key, and `performance` benchmarks both our code and the author's.
+Our computation must last no longer than $5/3$ of the reference time.
 
-Since they want performance, and the machine is given `dp` and `dq`, let's implement a naive RSA-CRT.
+Since they want performance, and the machine is given $d_p$ and $d_q$, let's implement a naive RSA-CRT.
 The algorithm basically works like so:
 ```haskell
 Inputs: m, dp, dq, p, q, iq
@@ -45,7 +45,8 @@ s  = CRT(sp, sq)  -- usually, (sp - sq mod p)*q*iq + sq mod pq
 RETURN s
 ```
 
-The cost of performing more operations is overshadowed by that 
+The cost of performing more operations is overshadowed by the gains of working modulo $p$ and $q$ rather than $n$, even though we are running within a python interpreter.
+Powering is very expensive!
 
 ```haskell
 ; R2 = Sq
@@ -102,15 +103,15 @@ Side Channels and Fault Attacks   | Neige  | 13     | 469
 
 > Vous voilà embauché chez Obiture et on vous demande maintenant de calculer une signature RSA avec un code résistant à une attaque par faute tout en gardant de bonnes performances. Vous devez résister à la fameuse attaque de Bellcore.
 
-Things get slightly more complicated: now, our RSA signature must be resistant to some fault attacks.
-Of course the naive implementation above doesn't suffice.
+Things get slightly more complicated: now, our RSA signature must resist against fault attacks.
+Of course, the naive implementation above doesn't suffice.
 ```yml
 >>> 2
 [*] Running attacks on your code when the machine is initialized without d.
 [!] Nope! Your code is not secure enough.
 ```
 
-What makes this chall harder is that we don't know what happens in `medium_attack`.
+What makes this chall harder is that we don't know what happens in `medium_attack`:
 ```py
 def medium(code):
     print("[*] Running attacks on your code when the machine is initialized without d.")
@@ -122,20 +123,21 @@ def medium(code):
     flag_medium = open("flag_medium.txt").read().strip()
     print(f"[+] Congrats! Here is the medium flag: {flag_medium}")
 ```
-The threat model is also not clarified, which can make the chall feel quite guessy.
+The threat model is also not clarified, which can make the whole task feel quite guessy.
 However, this is more realistic: in real life, you can't know exactly what your attacker is going to do.
-We are also given a lead, the Bellcore attack.
-Searching about it on the internet quickly yields plenty of information; this attack is in fact very simple in principle.
+We are also given a lead!
+Searching about the Bellcore attack on the internet quickly yields plenty of information; it is in fact very simple in principle.
 
 Imagine you want to recover the secret key of some hardware implementing RSA-CRT.
-Choose a message `m`, and compute a valid signature `s`.
-Now sign `m` but introduce a fault in the computation of, say, `sp`.
-The quantity `s - s'` has non-trivial gcd with `n`!
-In fact, `s - s' mod p = sp - s'p mod p ≠ 0` whereas `s - s' mod q = sq - sq mod q = 0`, which implies that `gcd(s - s', n) = q`.
+Choose a message $m$, and compute a valid signature $s$.
+Now sign $m$ again but introduce a fault in the computation of, say, $s_p$.
+The quantity $s - s'$ has non-trivial gcd with $n$!
+In fact, $$s - s' \equiv s_p - s_p' \nequiv 0\ [p]$$ whereas $$s - s' \equiv s_q - s_q \equiv 0\ [q],$$ which implies that $\gcd(s - s', n) = q$.
 
-What's more, there are plenty of ways to inject such a fault: corrupt `dp` in memory, skip an instruction within the exponentiation, corrupt the result of the exponentiation, corrupt the message to be signed, and much more.
+What's more, there are plenty of ways to inject such a fault: corrupt $d_p$ in memory, skip an instruction within the exponentiation, corrupt the result of the exponentiation, corrupt the message to be signed, and much more.
 
-Luckily, there is an easy countermeasure: simply compute `s^e mod n` and check that it is equal to `e`.
+Luckily!
+There is an easy countermeasure: compute $s^e\ \mathrm{mod}\ n$ and check that it is equal to $m$.
 If they are different, erase everything.
 Otherwise, output the result.
 This should be pretty safe, right?
@@ -144,7 +146,9 @@ This should be pretty safe, right?
 
 It turns out the attacker also has plenty of ways to circumvent the countermeasure!
 For instance, she could corrupt the `Z` register so that jumps are (not) taken.
-Luckily, the literature describes a way to circumvent the circumventing; this is called the *lock principle*.
+
+Luckily!
+The literature describes a countermeasure to the countercountermeasure, called the *lock principle*.
 
 The idea is pretty simple (but inventing it is not so simple!):
 ```haskell
@@ -156,8 +160,8 @@ out = res
 IF guard != guard' THEN ERASE
 RETURN out
 ```
-Implementing a lock makes the procedure resistant against *second-order fault attacks*, an adversary faulting the code twice in an attempt to skip the checks.
-I guess increasing the amount of statements would increase the order of faults we are resisting against (?), but for this chall this is sufficient:
+Wrapping a check in a lock makes the procedure resistant against *second-order fault attacks*, an adversary faulting the code twice in an attempt to skip the checks.
+I guess increasing the amount of statements would increase the order of faults we are resisting against (?), but for now this is sufficient:
 ```haskell
 ; R2 = Sq
 MOV RD, R7 ; RD = q
@@ -212,8 +216,8 @@ MOV RD, RF
 end:
 STP
 ```
-Note how the signature never goes into `R0` before the lock.
-If we simply had two checks, the attacker might be able to simply stop the machine before the erasure and recover the output: this countermeasure would have amounted to nothing!
+Note how the signature never goes in `R0` before stepping into the lock.
+If we simply had two checks the attacker might be able to simply stop the machine early and recover the output, ruining the whole point of the countercountercountermeasure!
 We prevent such a scenario by writing the temporary results in `R1`, which according to the challenge description isn't accessible to the attacker as machine output.
 
 ```yml
@@ -239,41 +243,42 @@ Side Channels and Fault Attacks   | Neige  | 2     | 498
 > En tant qu'expert chez Obiture, vous devriez être capable de produire un code pour calculer une signature RSA qui résiste à plusieurs attaques par faute alors même que vous ne connaissez pas la clef publique.
 
 Things get harder yet again.
-This time we aren't even given `e`, so we can't check `m` against `s^e mod pq`!
+This time we aren't even given $e$, so we can't check $m$ against $s^e~\mathrm{mod}~pq$!
 
-Nevertheless, the literature does describe this situation, along with two families of countermeasures dedicated to this case:
+Nevertheless, the beloved literature does describe this situation along with two families of countermeasures dedicated to this case:
 - checking procedures
 - infective procedures
 
 Countermeasures belonging to the first family verify that some arithmetical identities hold and obliterate the result otherwise, whereas infective procedures attempt to propagate the error.
-That is, the idea is to make the computation as complicated as possible while retaining decent performances, so that if a fault is introduced at some point it corrupts the final result so completely that it becomes impossible to extract any kind of meaningful information.
+That is, their idea is to make the computation as complicated as possible while retaining decent performances, so that a fault introduced at any point corrupts the final result so completely that it becomes impossible to extract any kind of meaningful information.
 
 This sounds very promising, so let's try exactly that.
 
-![not-secure-enough](memes/notsecureenough.jpg)
+![not secure enough](memes/notsecureenough.jpg)
 
-At some point the bytecode grows so convoluted that I have to throw it away because I can't even debug the correctness anymore.
+Over time the bytecode grows so convoluted that I have to throw it away because I can't even debug the correctness anymore.
 
-![locks](memes/locks.jpg)
+![three locks per check](memes/locks.jpg)
 
-At this point I realize a dreadful truth: every countermeasure I tried has a fatal weakness.
-Indeed, if `dp` (or `dq`) got corrupted since the beginning, they wouldn't be able to distinguish between an actually correct key because we don't know `d` nor `e`.
-Even worse, the correctness forces the code to compute a "valid" signature in that case, making it vulnerable once again to the Bellcore attack.
+It is the point where a dreadful truth dawns upon me: every single countermeasure I tried has a fatal weakness!
+If $d_p$ (or $d_q$) got corrupted ever since the beginning, I couldn't distinguish between an actually correct key because we don't know $d$ nor $e$.
+Even worse, the correctness forces our code to compute a "valid" signature in that case, making it vulnerable once again to the Bellcore attack.
 Is the chall even solvable?
 This is the moment I give up.
 
 However! Only a day later, Achléole flags!
-This means the chall is possible after all 👀.
+This means the task is possible after all 👀.
 With a sudden burst of motivation, I go back to working on it.
-Let's make the assumption that there are no permanent faults on `dp` and `dq`.
+This time, let's operate under the assumption that there are no permanent faults on $d_p$ and $d_q$.
 
 ![dead](memes/dead.jpg)
 
-I'm just about to give up again when I get an idea that sounds somewhat hairbrained, but interesting enough to give it a try: what if we could do just like part 2?
-We have enough information to recompute `e`, and then we could check `m` against `s^e mod pq`.
+I'm just about to give up again when I get an idea that sounds somewhat harebrained, yet interesting enough to give it a try: what if we could do just like part 2?
+We have enough information to recompute $e$, and then we could check $m$ against $s^e\ \mathrm{mod}\ pq$.
 And of course, a lock around that.
 
-I also implement something (computing `sp' = m^{dp - 1} mod p` and `sq' = m^{dq - 1} mod q` then checking `s'm` against `s`) inspired by Giraud's countermeasure because it doesn't add too much complexity to the code and two checks are better than one.
+I also implement something (computing $s_p' \equiv m^{dp - 1}\ [p]$ and $s_q' \equiv m^{dq - 1}\ [q]$ then checking $s'm$ against $s$) inspired by Giraud's countermeasure because it doesn't add too much complexity to the code and two checks are better than one.
+Probably.
 
 ```haskell
 MOV R0, #1
@@ -340,7 +345,7 @@ MUL R2, R2, R7
 ADD R2, R2, R4 ; s'
 
 ; normalization
-MUL R4, R6, R7
+MUL R4, R6, R7 ; n
 MOV RD, R4
 MOD R1, R1
 
@@ -356,7 +361,7 @@ JA erase
 
 nextverif:
 MOV RC, RB
-POW R1, R4
+POW R1, R4 ; s^e
 MOD R1, R1
 MOD R5, R5
 CMP R1, R5 ; lock principle
@@ -391,14 +396,15 @@ Now let's submit that to the remote!
 ![not secure enough](memes/notsecureenough2.jpg)
 
 Very disappointing.
-However, there is an interesting observation to be made: the rejection of the code took much longer than previous tries.
+Nevertheless, there is an interesting observation to be made: the rejection of this code took much longer than previous tries.
 Could this mean it passes more checks?
 Trying again, the time varies wildly.
 Could this mean some of these faults are random?
-Since I pass them with not insignificant probability, perhaps I could just submit the code several time and get lucky once.
+Since I probably pass them with not insignificant probability, I could probably just submit the code several times and probably get lucky once.
+Probably.
 
-And indeed, it eventually yields the flag!
+It eventually yields the flag!
 
 ![turn tables](memes/turntables.jpg)
 
-In fact, it turned out afterwards (thanks Neige!) the "random component" was due to a bug on my part when computing `e`.
+It turned out afterwards (thanks Neige!) the "random component" was due to a bug on my part when computing $e$, where I should have divided both $p-1$ and $q-1$ by their gcd in order to ensure coprimeness.
