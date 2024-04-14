@@ -1,0 +1,8 @@
+version: '3.9'
+services:
+  secret-shenanigans:
+    build: .
+    ports:
+      - "4000:4000"
+    environment:
+      - DEBUG = 1
